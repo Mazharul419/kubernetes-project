@@ -27,9 +27,13 @@ Spec:
 ```
 
 `apiVersion` - specifies the API version, typically v1
+
 `Kind` - specifies the Object, set to `Pod`
+
 `Metadata` - contains identifying information like `name` and optional `labels`
+
 `Spec`- Outlines further information for Kubernetes - since it is a `Pod` object, the `containers` field is defined which speicifies the container to run. It is a list (given by `-` symbol in `-image`), since Pods may have more than one container.
+
 `image` specifies the image to be used - if no tag, then default `latest` tag
 
 To run this file `kubectl apply -f pod.yaml`
