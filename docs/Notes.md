@@ -117,6 +117,7 @@ DEMO deployment.yaml file (`nginx-deployment.yaml`):
 
 ```yaml title="Pod YAML fie" linenums="1"
 apiVersion: apps/v1
+kind: Deployment
 metadata:
     name: nginx-deployment
     labels:
@@ -239,6 +240,98 @@ The IP acts as a middle-man for these pods to talk to each other.
 
 It is secure since ONLY accessible within the cluster, keeping internal communication safe, and is the default service type - so you just create a service and Kubernetes takes care of the rest.
 
+DEMO:
+
+Create deployment + ClusterIP Service
+
+You can do this by using the same code in the deployment.yaml file and adding `---` to create a seperate service
+
+```yaml title="deployment + service yaml file (nginx-svc.yaml)" linenums="1"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: nginx-deployment
+    labels:
+        app: nginx
+spec:
+    replicas: 3
+    selector:
+        matchLabels:
+            app: nginx
+    template:
+        metadata:
+            labels:
+                app: nginx
+        spec:
+            containers:
+            - name: nginx
+              image: nginx
+              ports:
+              - containerPort: 80
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc
+spec:
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+```
+
+`ApiVersion`: Set to v1 for services
+
+`kind`: tells Kubernetes the `Service` object is being created.
+
+`metadata`: Contains informtion such as labels, name, namespaces etc.
+
+`spec`: Defines specification at service level
+
+
+`selector`: Links Service to the correct pods - matches labels to ones in the `template` labels in the `metadata` - this ensures pods it's routing traffic to are the correct ones.
+
+Service here is connected to the pods using the selector label `app: nginx` which matches the templated pod label `app: nginx`
+
+`ports` contains information about ports related to the Service:
+
+`protocol` is the network protocol being used - set as `TCP`, which is default
+
+`port` is the Service port - running on HTTP (port 80)
+
+`targetPort` is the port for the pod/deployment being targeted (port 80 as defined in aerlier `containerPort`)
+
+`kubectl apply -f nginx-svc.yaml` to create deployment + service
+
+To access the service via ClusterIP you need the Cluster IP:
+
+```bash
+$ kubectl get svc
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP   5h46m
+nginx-svc    ClusterIP   10.96.183.89   <none>        80/TCP    21m
+```
+One way to test the service is to access it through the IP address locally.
+
+For this you need to do a port-forward:
+
+```bash
+kubectl port-forward svc/nginx-svc 8080:80
+```
+Format:
+`svc/[NAME OF SERVICE]
+[localhost port]:[Service port]
+
+You access the application via localhost/[localhost port]
+
+Another way is to launch a temporary shell with Network debugging tools i.e, curl, wget, dig etc.
+
+You can then test using a relevant tool such as using curl to see if it is accessible
+
 #### Node Port
 
 It is a way to make your service accessible outside the Kubernetes cluster. It opens a specific port on each node in your cluster and forwards traffic from that port to your service. 
@@ -262,3 +355,195 @@ Node port is useful when you want to export the service to the outside world but
 
 This exposes your service externally using your cloud providers load balancer - this will distribute traffic across your pods. There is an internal load balancer too that distributes traffic evenly to your pods.
 
+## Storage
+
+Persistent storage is required since containers are ephemeral i.e., temporary or short-lived.
+
+For example, if you have a database associated with your pod, and it goes down, then the database goes with it - and new pods won't have that data on it.
+
+Persistent storage ensures data reliability beyond the pod lifecycle, and is critical for stateful applications i.e., applications that need to retain data from previous sessions such as databases, or message queues.
+
+### PV
+
+To address this, Kubernetes uses Persistent Volumes (PVs) which is storage set aside for applications. 
+
+The storage is abstracted - so applications does not need to be concerned with WHERE the storage comes from (cloud, NFS server, local disk etc.). It just needs to know that storage is AVAILABLE, so can use it.
+
+Kubernetes admins can define volumes with properties such as size, access mode, and storage claims.
+
+Once created, they are available for pods to claim through Persistent Volume Claims (PVCs)
+
+PVCs are requests for storage that applications make to the cluster - which include the amount of storage, and other requirements.
+
+The cluster then looks for a Persistent Volume that matches the request and binds it to the PVC.
+
+This allows the application to access storage available in the cluster.
+
+## Configuration Data
+
+### Config Map
+
+If your application needs configuration data to run - it needs to get this from somewhere, such as environment variables, urls, or file paths.
+
+You might not want to hardcode these in the application in cases they change.
+
+So you can store them using ConfigMaps - these are storage boxes for non-confidential data that your pod might need to access, and config settings to your pod.
+
+They provide and pass configuration settings - ensuring they have the correct configuration before they spin up.
+
+DEMO: Config Map
+
+A config map will be created that passed the environment variables `APPCOLOUR=blue` and `APPMODE=production`:
+
+To create use:
+
+`kubectl create configmap my-config --from-literal=APPCOLOUR=blue --from-literal=APPMODE=production`
+
+To pass the config it is passed as part of a pod being created, based on a busybox container.
+
+```yaml linenums=1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cm-demo
+spec:
+  containers:
+  - name: demo-container
+    image: busybox
+    command: ["/bin/sh", "-c", "env && sleep 3600"]
+    env:
+    - name: APP_COLOUR
+      valueFrom:
+        configMapKeyRef:
+          name: my-config
+          key: APP_COLOUR
+    - name: APP_MODE
+      valueFrom:
+        configMapKeyRef:
+          name: my-config
+          key: APP_MODE
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config
+  volumes:
+  - name: config-volume
+    configMap:
+      name: my-config
+```
+
+Here a pod is defined which is based on the busybox container. 
+
+Environment variables are passed in using `valueFROM`, which maps the pod environment variables to the ones created in the `my-config` Config Map created earlier by the `key`. 
+
+These values are accessible by defining a volume containing the Config Map in the pod and mounting this onto the container.
+
+### Secrets
+
+These are designed to store secrets - they are base64 encoded.
+
+This means it isn't stored as plain text.
+
+These aren't secure - as someone can simply decode it.
+
+LOOK AT ALTERNATIVE WAYS OF STORING ENCRYPTED SECRETS.
+
+These can be mounted onto containers as volumes or exposed as environment variables.
+
+DEMO: Secret Creation and use
+
+use `kubectl create secret generic my-secret --from-literal=username=myuser --from-literal=password=mypassword`
+
+To check these are applied use:
+
+`kubectl get secrets`
+
+```bash
+NAME        TYPE     DATA   AGE
+my-secret   Opaque   2      67m
+```
+
+To see what this looks like in Kubernetes:
+
+```bash linenums=1
+$ kubectl get secrets my-secret -o yaml
+apiVersion: v1
+data:
+  password: bXlwYXNzd29yZA==
+  username: bXl1c2Vy
+kind: Secret
+metadata:
+  creationTimestamp: "2026-05-10T19:14:11Z"
+  name: my-secret
+  namespace: default
+  resourceVersion: "37790"
+  uid: 5d59cd85-b9c8-4492-9b33-8522c541a2cb
+type: Opaque
+```
+
+These are base64 encoded - so the actual values can be found by using base64 decoding:
+
+```bash
+$ echo "bXlwYXNzd29yZA==" | base64 -d
+mypassword
+$ echo "bXl1c2Vy" | base64 -d
+myuser
+```
+
+Not so secure.
+
+A pod is defined with secrets accessible BOTH as environment variables and volume mounts:
+
+```bash title="secret-pod.yaml" linenums=1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-demo-pod
+spec:
+  containers:
+    - name: secret-demo-container
+      image: nginx
+      env:
+        - name: SECRET_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: my-secret
+              key: username
+        - name: SECRET_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: my-secret
+              key: password
+      volumeMounts:
+      - name: secret-volume
+        mountPath: "etc/secret-volume"
+        readOnly: true
+  volumes:
+  - name: secret-volume
+    secret:
+      secretName: my-secret
+```
+
+To apply:
+
+`kubectl apply -f secret-pod.yaml`
+
+To investigate what's going on exec into the container:
+
+`kubectl exec -it secret-demo-pod -- /bin/sh`
+
+Once inside - you can get the username and passwords through the two methods:
+
+
+```sh title = "Environment variable:"
+# echo $SECRET_USERNAME
+myuser
+# echo $SECRET_PASSWORD
+mypassword
+```
+
+```sh title = "Environment variable:"
+$ cat /etc/secret-volume/username
+myuser
+$ cat /etc/secret-volume/password
+mypassword
+```
