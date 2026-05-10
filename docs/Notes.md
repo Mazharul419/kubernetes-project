@@ -170,7 +170,7 @@ Here the `labels:` show `app: nginx` - which the selector from earlier used to e
 
 To run this deployment `kubectl apply -f nginx-deployment.yaml`
 
-??? info "Information"
+!!! info "Information"
 
     When running this Kubernetes does not just create pods directly - it creates Replica sets FIRST. This is a controller responsible for ensuring the correct number of pods are running. This can be checked by running `kubectl get replicaset` - it shows you the replica set with the same name as your deployment followed by unique identifier. This takes care of creating your pods.
 
@@ -195,4 +195,70 @@ You won't interact with ReplicaSets by themselves.
 In a deployment you can have 2 versions of application running which you can define, this will then have a ReplicaSet for each version (total 2). These will then control how many pods of each version will be running at a given time.
 
 A deployment simplifies things, by taking care of ReplicaSets - they give you more control with less effort.
+
+### Services
+
+Services allows you to expose your application you created as pods and deployments so other users can access them.
+
+They are the connectors in your application network - they ensure everything that needs to communicate can do so i.e., internal pods or external resources.
+
+Example:
+
+If you have a groups of pods for an application split into Frontend, Database, and Backend.
+
+These need to commmunicate to each other for the application to run smoothly.
+
+Services allows for seamless connectivity between each of these group of pods.
+
+They allow you to do this without worrying about networking.
+
+They allow applications to be built in a loosely coupled way - so different parts of your application can work independently, and if upgrades are needed, services ensure they can still communicate with each other. This allows modularity in differnt parts of your applications.
+
+Services use labels to identify which pods they should be connecting - so when you create a service you are telling Kubernetes which labels to look out for to connect these group of pods together.
+
+Different types:
+- Cluster IP: Default - gives stable internal IP address that pods can use to talk to each other
+- Node Port: Exposes your service on a specific port on each node on your cluster, a simple way to make your service exposable outside the cluster
+- Load Balancers: Typically used in Cloud environments - needs cluster in cloud. Creates External Load Balancer that distributes traffic to your pods.
+
+!!! info "Information"
+
+    Services work at the Network layer, using TCP and other Networking protocols. These are the backbone of Networking in Kubernetes. Behind the scenes kube-proxy is in charge - creating ip tables and routes.
+
+#### Cluster IP
+
+It is like the internal phone-line of the Kubernetes cluster.
+
+When you create a Service of the type: ClusterIP - Kubernetes gives it a unique internal IP address called the Cluster IP. If pods need to talk to each other but don't need external access.
+
+Example:
+
+If you have front-end pods, but need to communicate with back-end pods and they need to talk to each other, and not the outside world, Cluster IP is suitable.
+
+The IP acts as a middle-man for these pods to talk to each other.
+
+It is secure since ONLY accessible within the cluster, keeping internal communication safe, and is the default service type - so you just create a service and Kubernetes takes care of the rest.
+
+#### Node Port
+
+It is a way to make your service accessible outside the Kubernetes cluster. It opens a specific port on each node in your cluster and forwards traffic from that port to your service. 
+
+That means you can access your service using the node's IP address and the specific node port assigned.
+
+Example:
+
+If you have a nginx web server - it will have a port it typically listens on i.e., 80 - this is the Target Port
+
+You have a service port - this is an internal port the service listens on. Kubernetes forwards requests from this port to the target port on the pods.
+
+Node port - this is the port that gets opened on each node, typically a high number i.e, 30080.
+
+If you want to reach your service from outside the cluster, you would use the node ip and the port - http://nodeip:nodeport
+
+Node port is useful when you want to export the service to the outside world but don't need a load balancer - this makes it useful for development and local testing.
+
+
+#### Load Balancer
+
+This exposes your service externally using your cloud providers load balancer - this will distribute traffic across your pods. There is an internal load balancer too that distributes traffic evenly to your pods.
 
