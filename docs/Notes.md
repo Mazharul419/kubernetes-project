@@ -401,7 +401,7 @@ To create use:
 
 To pass the config it is passed as part of a pod being created, based on a busybox container.
 
-```yaml linenums=1
+``` yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -464,7 +464,7 @@ my-secret   Opaque   2      67m
 
 To see what this looks like in Kubernetes:
 
-```bash linenums=1
+```bash
 $ kubectl get secrets my-secret -o yaml
 apiVersion: v1
 data:
