@@ -401,7 +401,7 @@ To create use:
 
 To pass the config it is passed as part of a pod being created, based on a busybox container.
 
-``` yaml
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -493,7 +493,7 @@ Not so secure.
 
 A pod is defined with secrets accessible BOTH as environment variables and volume mounts:
 
-```bash title="secret-pod.yaml" linenums=1
+```bash title="secret-pod.yaml" linenums="1"
 apiVersion: v1
 kind: Pod
 metadata:
@@ -534,14 +534,14 @@ To investigate what's going on exec into the container:
 Once inside - you can get the username and passwords through the two methods:
 
 
-```sh title = "Environment variable:"
+```sh title="Environment variable:"
 # echo $SECRET_USERNAME
 myuser
 # echo $SECRET_PASSWORD
 mypassword
 ```
 
-```sh title = "Environment variable:"
+```sh title="Environment variable:"
 $ cat /etc/secret-volume/username
 myuser
 $ cat /etc/secret-volume/password
