@@ -17,6 +17,7 @@ secrets/
 *_rsa
 *_rsa.pub
 *.asc
+.venv/
 
 # ============================================
 # Terraform / Terragrunt / IaC

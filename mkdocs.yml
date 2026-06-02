@@ -33,3 +33,9 @@ markdown_extensions:
       alternate_style: true
   - admonition
   - pymdownx.details
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/extra.css
