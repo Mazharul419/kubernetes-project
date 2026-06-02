@@ -1,9 +1,39 @@
-CLUSTER CREATION DEMO:
+### Cluster Creation
 
 Kind used to create Kubernetes cluster for development/testing - perfect for learning
 
-Cluster defined - this creates API server needed for pods to be created:
+Kubernetes-In-Docker
 
+How to create a kubernetes cluster using kind:
+
+Control plane only:
+
+```bash
+kind create cluster
+```
+
+With a Control plane and worker nodes, a configuration file in yaml needs to be defined:
+```bash title="Control plane + worker nodes"
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+
+# Current supported version is v1alpha4 https://kind.sigs.k8s.io/docs/user/configuration/
+```
+
+Then with bash:
+
+```bash
+kind create cluster --config kind-conf.yaml
+```
+
+Can add `--name` flag for name, default is `kind-kind`
+
+Cluster defined - this creates API server needed for pods to be created:
+ 
 
 ```yaml title="Pod YAML fie" linenums="1"
 kind: Cluster
@@ -16,7 +46,7 @@ nodes:
 # Current supported version is v1alpha4 https://kind.sigs.k8s.io/docs/user/configuration/
 ```
 
-
+### Pods
 
 Pods are the smallest unit of deployment in a Kubernetes cluster
 
@@ -96,6 +126,8 @@ spec:
 .
 .
 ```
+
+### Deployments
 
 Deploying apps on Kubernetes is important
 
