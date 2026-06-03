@@ -35,7 +35,7 @@ Can add `--name` flag for name, default is `kind-kind`
 Cluster defined - this creates API server needed for pods to be created:
  
 
-```yaml title="Pod YAML fie" linenums="1"
+```yaml title="Cluster YAML file" linenums="1"
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
