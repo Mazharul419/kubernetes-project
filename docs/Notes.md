@@ -1,3 +1,9 @@
+## Basics
+
+### What is Kubernetes?
+
+Kubernetes is a portable, extensible, open source platform for managing containerised workloads and services that facilitate both declerative configuration and automation.
+
 ### Cluster Creation
 
 Kind used to create Kubernetes cluster for development/testing - perfect for learning
@@ -52,7 +58,7 @@ Pods are the smallest unit of deployment in a Kubernetes cluster
 
 Each pod contains one or more containers:
 
-Containers in a pod are always scheduled together, i.e, they share the same machine
+Containers in a pod are [always co-located and co-scheduled together](https://kubernetes.io/docs/concepts/workloads/pods/), i.e, they share the same machine
 
 They share the same IP address and port space, and communicate to each other using localhost
 
@@ -229,7 +235,7 @@ In a deployment you can have 2 versions of application running which you can def
 
 A deployment simplifies things, by taking care of ReplicaSets - they give you more control with less effort.
 
-### Services
+## Exposure/Services
 
 Services allows you to expose your application you created as pods and deployments so other users can access them.
 
@@ -258,7 +264,7 @@ Different types:
 
     Services work at the Network layer, using TCP and other Networking protocols. These are the backbone of Networking in Kubernetes. Behind the scenes kube-proxy is in charge - creating ip tables and routes.
 
-#### Cluster IP
+### Cluster IP
 
 It is like the internal phone-line of the Kubernetes cluster.
 
@@ -364,7 +370,7 @@ Another way is to launch a temporary shell with Network debugging tools i.e, cur
 
 You can then test using a relevant tool such as using curl to see if it is accessible
 
-#### Node Port
+### Node Port
 
 It is a way to make your service accessible outside the Kubernetes cluster. It opens a specific port on each node in your cluster and forwards traffic from that port to your service. 
 
@@ -383,7 +389,7 @@ If you want to reach your service from outside the cluster, you would use the no
 Node port is useful when you want to export the service to the outside world but don't need a load balancer - this makes it useful for development and local testing.
 
 
-#### Load Balancer
+### Load Balancer
 
 This exposes your service externally using your cloud providers load balancer - this will distribute traffic across your pods. There is an internal load balancer too that distributes traffic evenly to your pods.
 
