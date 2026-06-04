@@ -235,6 +235,85 @@ In a deployment you can have 2 versions of application running which you can def
 
 A deployment simplifies things, by taking care of ReplicaSets - they give you more control with less effort.
 
+### Init Container
+
+A container that initialises before your main application container runs in a pod.
+
+Contains utilities or setup scripts not present in an app image.
+
+Can specify init containers in the Pod specification, alongside the `containers` array (for app containers)
+
+### Sidecar Container
+
+A container that starts before main application container and continues to run.
+
+Example - taken from [Kubernetes Docs](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/#sidecar-example):
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  labels:
+    app: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: alpine:latest
+          command: ['sh', '-c', 'while true; do echo "logging" >> /opt/logs.txt; sleep 1; done']
+          volumeMounts:
+            - name: data
+              mountPath: /opt
+      initContainers:
+        - name: logshipper
+          image: alpine:latest
+          # Setting restartPolicy: Always makes this a sidecar container.
+          restartPolicy: Always
+          command: ['sh', '-c', 'tail -F /opt/logs.txt']
+          volumeMounts:
+            - name: data
+              mountPath: /opt
+      volumes:
+        - name: data
+          emptyDir: {}
+```
+
+Can share volumes if you mount it.
+
+They share networking since it is in the same pod as the App.
+
+Examples: Log collector, Service mesh proxy, Vault agent injector for secrets.
+
+This adds another complexity with resources i.e., memory, storage, CPU, and monitoring requirement.
+
+Sidecars are still the go-to pattern nevertheless.
+
+### Adapter Container
+
+Container which transforms/normalises data from/to the main app, for example:
+
+For logs/metrics that need to be transformed into a format that Observability platform i.e., Prometheus.
+
+Log formatter normalising log lines to JSON.
+
+
+### Ephemeral Container for debugging
+
+Temporary containers used to troubleshoot failed containers - especially useful when there is no shell to exec into in the application or debugging utilities, i.e., curl.
+
+These are Ephemeral i.e., short-lived, and do not have guarantees for resources and execution and are never automatically restarted.
+
+This is not created under the Pod Specification but via [`kubectl debug`](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container-example) command
+
 ## Exposure/Services
 
 Services allows you to expose your application you created as pods and deployments so other users can access them.
