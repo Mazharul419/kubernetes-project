@@ -314,6 +314,29 @@ These are Ephemeral i.e., short-lived, and do not have guarantees for resources 
 
 This is not created under the Pod Specification but via [`kubectl debug`](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container-example) command
 
+## Pod QoS classes
+
+QoS = Quality of Service 0 defines how Kubernetes makes decisions about which Pods to evict when there aren't enough resources available on a Node.
+
+The types are:
+
+Guaranteed: These ones have the strictest resources limits and are least likely to be evicted. Cannot be killed until they exceed their limits or there are no lower-priority pods that can be preempted from the Node.
+
+Burstable: These have lower bound resource guarantees based on the request, but don't need a specific limit. Most pods fall into this category. Evicted only after Best Effort pods are.
+
+Best Effort: These can use node resources that aren't assigned to pods in the other classes. The kubelet prefers to evict these pods when under resouce pressure.
+
+
+## Probes
+
+These are health checks run by the Kubelet to check container state
+
+Liveness probe: Checks if container is still alive, restarts container if not.
+
+Readiness probe: Checks if container is ready to serve traffic. If not it's Pod is removed from the service endpoint - still runs though.
+
+Startup probe: Checks if app has started. Disables all other probes until it succeeds.
+
 ## Exposure/Services
 
 Services allows you to expose your application you created as pods and deployments so other users can access them.
