@@ -51,7 +51,7 @@ nodes:
 
 # Current supported version is v1alpha4 https://kind.sigs.k8s.io/docs/user/configuration/
 ```
-
+## Running and Managing workloads
 ### Pods
 
 Pods are the smallest unit of deployment in a Kubernetes cluster
@@ -314,7 +314,7 @@ These are Ephemeral i.e., short-lived, and do not have guarantees for resources 
 
 This is not created under the Pod Specification but via [`kubectl debug`](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container-example) command
 
-## Pod QoS classes
+### Pod QoS classes
 
 QoS = Quality of Service 0 defines how Kubernetes makes decisions about which Pods to evict when there aren't enough resources available on a Node.
 
@@ -327,7 +327,7 @@ Burstable: These have lower bound resource guarantees based on the request, but 
 Best Effort: These can use node resources that aren't assigned to pods in the other classes. The kubelet prefers to evict these pods when under resouce pressure.
 
 
-## Probes
+### Probes
 
 These are health checks run by the Kubelet to check container state
 
@@ -337,7 +337,92 @@ Readiness probe: Checks if container is ready to serve traffic. If not it's Pod 
 
 Startup probe: Checks if app has started. Disables all other probes until it succeeds.
 
-## Exposure/Services
+```yaml title="Example"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: probe-example
+spec:
+  containers:
+  - name: app
+    image: registry.k8s.io/e2e-test-images/agnhost:2.40
+    ports:
+    - containerPort: 8080
+    startupProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      failureThreshold: 30
+      periodSeconds: 10
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8080
+      periodSeconds: 5
+```
+Taken from [Docs](https://kubernetes.io/docs/concepts/workloads/pods/probes/#configure-probes)
+
+### [Deployment Strategies](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+
+### Rolling Updates
+
+Default deployment strategy in Kubernetes.
+
+Gradually replaces old pods with new ones to achieve zero downtime.
+
+It does so via ReplicaSets - when you update the container image or configuration:
+- New ReplicaSet scales up
+- Old one scales down
+
+As new pods get readu
+
+Max Surge - how many extra pods can exist during rollout, default 25%
+Max Unavailable - how many pods can be down during rollout, default 25%
+
+Need to have readiness probe to determine if new pods are ready to be served traffic - old pods keep serving traffic until then.
+
+If something goes wrong here you can use `kubectl rollout pause` - investigate and fix this, and resume - built feature in Kubernetes.
+
+#### Recreate (Old, Simpler)
+This kills all exisiting Pods first, and then new ones are created.
+
+Used when old and new versions of app cannot exist simultaneosly e.g., Database migration
+
+#### Rollback
+
+Kubernetes makes rolling back a deployment - it keeps the old ReplicaSet around (scaled to 0).
+
+`kubectl rollout history deployment <name>` - shows Deployment revision history
+
+`kubectl rollout undo deployment <name>` - rolls back deployment to previous version
+
+`kubectl rollout undo deployment <name> --to-revision=<revision number>` - rolls back deployment to a specific version
+
+### Resource Requests/Limits
+
+When specifying a Pod, you can optionally specify the amount of resource a container needs - the most common are CPU and memory (RAM).
+
+When specifying this, the kube-scheduler uses this info to decide which node to place the Pod on.
+
+However, if a node is running where the Pod has enough resource available, it is possible and allowed for a container to use more resource than is requested.
+
+This can become problematic when a container takes up the whole memory in the node - so additional Pods cannot be scheduled.
+
+This is where resource limits come in - and the kubelet enforces these limits so that running containers cannot use more of this resource.
+
+If CPU is exceeded, the Kernel will restrict access to the CPU and the app will slow down
+
+If memory is exceeded - the Kernel may terminate it - depending on whether memory pressure is detected. 
+
+# Exposure/Services
 
 Services allows you to expose your application you created as pods and deployments so other users can access them.
 
