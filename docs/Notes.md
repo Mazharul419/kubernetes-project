@@ -408,6 +408,8 @@ Kubernetes makes rolling back a deployment - it keeps the old ReplicaSet around 
 
 ### Resource Requests/Limits
 
+https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
 When specifying a Pod, you can optionally specify the amount of resource a container needs - the most common are CPU and memory (RAM).
 
 When specifying this, the kube-scheduler uses this info to decide which node to place the Pod on.
@@ -420,7 +422,168 @@ This is where resource limits come in - and the kubelet enforces these limits so
 
 If CPU is exceeded, the Kernel will restrict access to the CPU and the app will slow down
 
-If memory is exceeded - the Kernel may terminate it - depending on whether memory pressure is detected. 
+If memory is exceeded - the Kernel may terminate it - depending on whether memory pressure is detected.
+
+The following Pod has two containers. Both containers are defined with a request for 0.25 CPU and 64MiB (226 bytes) of memory. Each container has a limit of 0.5 CPU and 128MiB of memory. You can say the Pod has a request of 0.5 CPU and 128 MiB of memory, and a limit of 1 CPU and 256MiB of memory.
+
+```yaml title="Example"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend
+spec:
+  containers:
+  - name: app
+    image: images.my-company.example/app:v4
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+  - name: log-aggregator
+    image: images.my-company.example/log-aggregator:v6
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+```
+CPU: `250m` is 250 millicores/millicpu - which is a fractional way of representing CPU units - where 1000m is 1.0 CPU
+
+Memory: Mi (Mebibyte) is the base-2 equiavalent of measuring storage.
+
+Further reading: https://manalij62.medium.com/mb-vs-mib-in-kubernetes-whats-the-difference-and-why-it-matters-246c61facdff
+
+### Limit Ranges
+
+https://kubernetes.io/docs/concepts/policy/limit-range/
+
+Within a namespace (A isolated group of resources within a cluster) - a single object could monopolize all the available resources.
+
+This is where limit ranges come in - which are minimum and maximum limits for resources on a per-container or per-pod level within the namespace.
+
+They also set default request and limits for compute resources and automatically inject them to containers at runtime if not specified in their spec.
+
+Example (within default namespace):
+
+```yaml title="admin/resource/cpu-constraints.yaml"
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: limit-range-example
+  namespace: example-namespace
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "256Mi"
+    max:
+      cpu: "1"
+      memory: "1Gi"
+    min:
+      cpu: "100m"
+      memory: "128Mi"
+```
+
+defaultRequest — is how much CPU/Memory will be given to Container, if it doesn't specify it's own value
+
+default — is default limit for amount of CPU/Memory for Container, if it doesn't specify it's own value
+
+max — is maximum limit for amount of CPU/Memory that Container can ask for. I.e. it can't set it's own limit more than that
+
+min — is minimum limit amount of CPU/Memory that Container can ask for. I.e. it can't set it's own limit less than that
+
+https://stackoverflow.com/questions/61356073/relation-between-limitranges-default-defaultrequest-max-and-min-limits
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-constraint-namespace/
+
+You can then apply it using:
+
+`kubectl apply -f https://k8s.io/examples/admin/resource/cpu-constraints.yaml --namespace=example-namespace`
+
+To view detailed info:
+
+`kubectl get limitrange cpu-min-max-demo-lr --output=yaml --namespace=example-namespace`
+
+### Resource Quota
+
+This enforces total resource usage in a namespace
+
+It helps prevent a single team from consuming all cluster resources.
+
+Example:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: mem-cpu-demo
+  Namespace: labs
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
+    Pods: "20"
+```
+### Labels
+
+Labels are used to group and identify resources - by doing so it keeps these organised.
+
+But it also is for selection - Services, Deployments, and Network Policies etc. use labels to identify objects i.e., Pods, Services, Deployments.
+
+Example:
+
+```yaml
+Metadata:
+    Labels:
+        App: frontend
+        Env: prod
+```
+
+Can now filter objects which are for frontend app and are in production!
+
+### Label Selectors
+
+These allow controllers such as Services or Deployments to find matching objects by labels.
+
+- Equality based: env = prod, tied != backend
+- Set-based: env in (dev, qa) tier notin (db)
+
+Used for Services to select pods to route traffic to, Deployments to manage matching ReplicaSets, and Monitoring tools to target specific workloads.
+
+Example:
+
+```yaml
+Selector:
+    matchLabels:
+        App: frontend
+```
+
+### Annotations
+
+Like labels, but for non-identifying metadata and aren't used to select objects
+
+Are used by tools, controllers and automations though
+
+```yaml title="Example"
+Metadata:
+    Name: my-pod
+    Annotations:
+        Description: "Frontend pod for Coderco app"
+        prometheus.io/scrap: "true"
+        prometheus.io/port: "8080"
+        kubernetes.io/change-cause: "Updated base image to v2"
+```
 
 # Exposure/Services
 
